@@ -1,0 +1,17 @@
+# Used by docker-compose: shared state in Redis, orders in PostgreSQL.
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:postgres}:5432/tickets
+    username: tickets
+    password: tickets
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+
+ticketdrop:
+  store: redis
+
+management:
+  health:
+    redis:
+      enabled: true

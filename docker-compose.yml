@@ -1,0 +1,39 @@
+# Two app instances behind nginx, sharing Redis (queue, seats) and PostgreSQL (orders).
+#   docker compose up --build
+#   k6 run load/drop.js          (or see README for running k6 in Docker)
+services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 20
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tickets
+      POSTGRES_USER: tickets
+      POSTGRES_PASSWORD: tickets
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "tickets"]
+      interval: 2s
+      retries: 20
+
+  app1: &app
+    build: .
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      redis: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+
+  app2: *app
+
+  lb:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./load/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on: [app1, app2]

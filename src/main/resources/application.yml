@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: ticket-drop
+  datasource:
+    url: jdbc:h2:mem:tickets;DB_CLOSE_DELAY=-1
+  sql:
+    init:
+      mode: always
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  threads:
+    virtual:
+      enabled: true
+
+ticketdrop:
+  store: memory            # memory (one instance, no Docker) or redis (shared, many instances)
+  tick-ms: 1000
+  event:
+    id: drop-2026
+    capacity: 500
+    max-per-user: 4
+    hold-ttl: 5m
+    access-ttl: 10m
+    admit-per-tick: 50
+    max-active-shoppers: 300
+    price-cents: 7500
+  limits:
+    join-burst: 5
+    join-per-second: 1
+  chaos:
+    enabled: true          # exposes /admin/chaos; turn off outside test environments
+    decline-rate: 0.0
+    latency-ms: 0
+
+management:
+  health:
+    redis:
+      enabled: false       # Redis is only used with store=redis (see application-docker.yml)
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
