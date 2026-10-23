@@ -15,3 +15,7 @@ management:
   health:
     redis:
       enabled: true
+
+server:
+  tomcat:
+    accept-count: 1000

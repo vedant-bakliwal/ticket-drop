@@ -15,6 +15,7 @@ const BUYERS = Number(__ENV.BUYERS || 1000);
 const ordersPlaced = new Counter("orders_placed");
 const soldOut = new Counter("sold_out");
 const declined = new Counter("payments_declined");
+const joinRetries = new Counter("join_retries");
 
 export const options = {
   scenarios: {
@@ -32,19 +33,39 @@ export function setup() {
   http.post(`${BASE}/admin/chaos`, JSON.stringify(chaos), { headers: { "Content-Type": "application/json" } });
 }
 
+// Join the waiting room, retrying (and honoring Retry-After) if the request fails.
+function join(headers, url) {
+  for (let i = 0; i < 5; i++) {
+    const r = http.post(url("/queue"), null, {
+      headers, tags: { name: "join" }, responseCallback: http.expectedStatuses(202, 429),
+    });
+    if (r.status === 202) return true;
+    joinRetries.add(1);
+    console.warn(`join failed for ${headers["X-User-Id"]}: HTTP ${r.status}`);
+    sleep(Number(r.headers["Retry-After"] || 1));
+  }
+  return false;
+}
+
 export default function () {
   const user = `buyer-${__VU}`;
   const headers = { "X-User-Id": user, "Content-Type": "application/json" };
   const url = path => `${BASE}/events/${EVENT}${path}`;
 
-  const join = http.post(url("/queue"), null, { headers, tags: { name: "join" } });
-  check(join, { "joined": r => r.status === 202 });
+  const joined = join(headers, url);
+  check(joined, { "joined": ok => ok });
+  if (!joined) return;
 
+  let admitted = false;
   for (let i = 0; i < 240; i++) {               // wait up to 4 minutes for our turn
     const s = http.get(url("/queue"), { headers, tags: { name: "status" } });
-    if (s.json("state") === "ADMITTED") break;
+    const state = s.status === 200 ? s.json("state") : null;
+    if (state === "ADMITTED") { admitted = true; break; }
+    if (state === "NOT_IN_QUEUE") join(headers, url);
     sleep(1);
   }
+  check(admitted, { "admitted": ok => ok });
+  if (!admitted) return;
 
   const qty = 1 + (__VU % 2);
   const hold = http.post(url("/holds"), JSON.stringify({ quantity: qty }), {

@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Start 2 app instances, Redis, PostgreSQL and nginx
         run: |
-          docker compose up --build -d --wait
+          DECLINE=0.1 docker compose up --build -d --wait
           for i in $(seq 60); do curl -sf localhost:8080/events/drop-2026/stats && break; sleep 2; done
       - name: Load test with 10% injected payment declines
         run: |
@@ -33,7 +33,7 @@ jobs:
             run -e BUYERS=600 -e DECLINE=0.1 /load/drop.js
       - name: App logs
         if: failure()
-        run: docker compose logs app1 app2 | tail -200
+        run: docker compose logs lb app1 app2 | tail -300
       - name: Stop
         if: always()
         run: docker compose down -v

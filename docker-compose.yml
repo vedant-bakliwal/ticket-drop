@@ -24,6 +24,7 @@ services:
     build: .
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      TICKETDROP_CHAOS_DECLINERATE: ${DECLINE:-0}
     depends_on:
       redis: { condition: service_healthy }
       postgres: { condition: service_healthy }
