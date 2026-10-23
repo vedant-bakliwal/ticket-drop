@@ -61,4 +61,15 @@ abstract class WaitingRoomContract {
         assertThat(room().join(e, "a", NOW.plusSeconds(5)).state()).isEqualTo(QueueStatus.State.ADMITTED);
         assertThat(room().status(e, "nobody", NOW).state()).isEqualTo(QueueStatus.State.NOT_IN_QUEUE);
     }
+
+    @Test
+    void leavingFreesASlotForTheNextBuyer() {
+        String e = event();
+        for (int i = 0; i < 3; i++) room().join(e, "u" + i, NOW);
+        assertThat(room().admit(e, 5, 2, ACCESS, NOW)).isEqualTo(2);
+        room().leave(e, "u0");
+        assertThat(room().isAdmitted(e, "u0", NOW)).isFalse();
+        assertThat(room().admit(e, 5, 2, ACCESS, NOW.plusSeconds(1))).isEqualTo(1);
+        assertThat(room().isAdmitted(e, "u2", NOW.plusSeconds(1))).isTrue();
+    }
 }

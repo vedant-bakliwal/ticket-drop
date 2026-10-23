@@ -83,4 +83,9 @@ public class InMemoryWaitingRoom implements WaitingRoom {
     public synchronized long active(String eventId, Instant now) {
         return room(eventId).admitted.values().stream().filter(now::isBefore).count();
     }
+
+    @Override
+    public synchronized void leave(String eventId, String userId) {
+        room(eventId).admitted.remove(userId);
+    }
 }

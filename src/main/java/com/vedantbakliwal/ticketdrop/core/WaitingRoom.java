@@ -22,4 +22,7 @@ public interface WaitingRoom {
     long queued(String eventId);
 
     long active(String eventId, Instant now);
+
+    /** Frees a buyer's shopper slot early (they bought, or seats ran out) so the next buyer can be admitted. */
+    void leave(String eventId, String userId);
 }

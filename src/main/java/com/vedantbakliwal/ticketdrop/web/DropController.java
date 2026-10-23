@@ -95,7 +95,12 @@ public class DropController {
                     .body(Map.of("error", "Not admitted yet. Join the queue and wait for your turn."));
             case INVALID_QUANTITY -> ResponseEntity.unprocessableEntity()
                     .body(Map.of("error", "Quantity must be between 1 and " + event.maxPerUser()));
-            case OK -> holdResponse(attempt.result());
+            case OK -> {
+                if (attempt.result().outcome() == HoldResult.Outcome.SOLD_OUT) {
+                    room.leave(event.eventId(), userId); // nothing left to buy: free the slot
+                }
+                yield holdResponse(attempt.result());
+            }
         };
     }
 
@@ -127,6 +132,9 @@ public class DropController {
             case HOLD_EXPIRED -> HttpStatus.GONE;
             case PAYMENT_DECLINED -> HttpStatus.PAYMENT_REQUIRED;
         };
+        if (status == HttpStatus.CREATED || status == HttpStatus.OK) {
+            room.leave(event.eventId(), userId);   // done shopping: let the next buyer in
+        }
         Map<String, Object> out = new java.util.LinkedHashMap<>();
         out.put("result", r.outcome().name());
         out.put("message", r.message());

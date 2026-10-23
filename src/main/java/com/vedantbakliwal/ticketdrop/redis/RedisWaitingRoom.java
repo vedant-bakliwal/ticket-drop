@@ -84,4 +84,9 @@ public class RedisWaitingRoom implements WaitingRoom {
         Long n = redis.opsForZSet().count(admitted(eventId), now.toEpochMilli() + 1, Double.POSITIVE_INFINITY);
         return n == null ? 0 : n;
     }
+
+    @Override
+    public void leave(String eventId, String userId) {
+        redis.opsForZSet().remove(admitted(eventId), userId);
+    }
 }
